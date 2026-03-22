@@ -1,0 +1,81 @@
+import os
+import json
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+import gspread
+from datetime import datetime
+from duckduckgo_search import DDGS
+import google.generativeai as genai
+
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+SHEET_ID = os.environ["SHEET_ID"]
+gc = gspread.service_account(filename="credentials.json")
+ws = gc.open_by_key(SHEET_ID).sheet1
+
+# Current data for duplicate check
+df_existing = pd.DataFrame(ws.get_all_records())
+existing_links = set(df_existing.get("Source Link", []))
+
+headers = ["Description", "City", "Zoning", "Area", "Transaction Value", "INR Per Sq ft", "Trns Type", "Trans Date", "Location Coordinates", "Property Type", "Comments", "Source Link", "Secondary Link", "Buyer", "Seller"]
+
+def extract_transaction(text, url):
+    prompt = f"""You are an expert Indian real-estate analyst. Extract ONE main land transaction from the article below.
+Return ONLY valid JSON with EXACT keys (null if missing). Do NOT add extra text.
+If it's not a clear land deal with value, return {{"Description": null}}.
+
+Keys: {json.dumps(headers)}
+
+Rules:
+- Trans Date: YYYY-MM-DD (use today if recent news)
+- Transaction Value: number or "X Cr"
+- INR Per Sq ft: calculate if possible, else null
+- Location Coordinates: "lat,lon" only if mentioned exactly, else null
+- Source Link: "{url}"
+- Secondary Link: "" (or another link if article mentions)
+- Only extract if deal happened in last 7 days.
+
+Article:
+{text[:12000]}
+"""
+    try:
+        response = model.generate_content(prompt)
+        json_str = response.text.strip().replace("```json", "").replace("```", "")
+        data = json.loads(json_str)
+        if not data.get("Description"):
+            return None
+        return [data.get(h, "") for h in headers]
+    except:
+        return None
+
+# ============== SEARCH NEWS + X ==============
+queries = [
+    "India land transaction OR acre deal OR plot acquisition OR real estate sale news",
+    "land deal India site:x.com OR site:twitter.com",
+    f"land transaction India {datetime.now().strftime('%Y-%m')}"
+]
+
+new_rows = 0
+with DDGS() as ddgs:
+    for q in queries:
+        for result in list(ddgs.text(q, max_results=5)):
+            url = result["href"]
+            if url in existing_links:
+                continue
+            try:
+                page = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+                soup = BeautifulSoup(page.text, "html.parser")
+                text = soup.get_text(separator=" ", strip=True)
+                
+                row = extract_transaction(text, url)
+                if row and row[0] and row[11] not in existing_links:
+                    ws.append_row(row)
+                    existing_links.add(row[11])
+                    new_rows += 1
+                    print(f"✅ Added: {row[0]}")
+            except:
+                continue
+
+print(f"Daily run complete. {new_rows} new transactions added.")
