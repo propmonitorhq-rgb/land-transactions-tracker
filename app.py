@@ -9,7 +9,7 @@ st.title("🇮🇳 AI Land Transactions Tracker")
 st.markdown("Automatically tracks land deals from news & X.com • Updated daily")
 
 # ================== LOAD DATA ==================
-SHEET_PUBLISH_URL = "https://docs.google.com/spreadsheets/d/1-HpRVgRvcZotPSVL8rnrkN0lvVtOsAD0Ki1I7Rw9EY4/edit?usp=sharing"  # ← CHANGE THIS
+SHEET_PUBLISH_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRPj-nFuvFfDAfhl61y5Qgssz6QQEY8RXtPaKBh73nfb0e8253X92pHh_rJ9TqpeOo_YSneo6_qyobA/pub?gid=1727136443&single=true&output=csv"  # ← CHANGE THIS
 df = pd.read_csv(SHEET_PUBLISH_URL)
 df = df.fillna("")
 
