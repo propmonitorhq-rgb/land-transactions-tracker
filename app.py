@@ -8,27 +8,17 @@ st.set_page_config(page_title="AI Land Transactions Tracker", layout="wide")
 st.title("🇮🇳 AI Land Transactions Tracker")
 st.markdown("Automatically tracks land deals from news & X.com • Updated daily")
 
-# ================== CHANGE THIS ==================
+# ================== YOUR GOOGLE SHEET URL ==================
 SHEET_PUBLISH_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRPj-nFuvFfDAfhl61y5Qgssz6QQEY8RXtPaKBh73nfb0e8253X92pHh_rJ9TqpeOo_YSneo6_qyobA/pub?output=csv"  
-# ← Paste the FULL link you copied above (replace the entire line)
+# ← Make sure this is the exact /pub?output=csv link
 
-# ================== LOAD DATA WITH FRIENDLY ERROR ==================
-try:
-    df = pd.read_csv(SHEET_PUBLISH_URL)
-    df = df.fillna("")
-except Exception as e:
-    st.error("❌ Could not load your Google Sheet!\n\n"
-             "Please follow Step 1 above and paste the FULL publish URL in app.py")
-    st.caption("Tip: The URL must end with /pub?output=csv and the sheet must be published as CSV.")
-    st.stop()
+# ================== LOAD DATA ==================
+df = pd.read_csv(SHEET_PUBLISH_URL)
+df = df.fillna("")
 
 # Convert date safely
 if "Trans Date" in df.columns:
     df["Trans Date"] = pd.to_datetime(df["Trans Date"], errors="coerce")
-
-# ================== DEBUG (will disappear once working) ==================
-st.subheader("🔍 Debug: Columns loaded from Google Sheet")
-st.write(df.columns.tolist())
 
 # ================== SIDEBAR FILTERS ==================
 st.sidebar.header("Filters")
@@ -58,7 +48,7 @@ if value_col in filtered.columns:
 else:
     st.metric("Total Value (₹)", "₹0")
 
-# ================== TABLE (matches your exact headers) ==================
+# ================== TABLE ==================
 display_cols = [
     "Description", "City", "Zoning", "Area", "Transaction Value",
     "INR Per Sq ft", "Trns Type", "Trans Date", "Property Type",
@@ -73,15 +63,12 @@ if "Link" in filtered.columns:
 if "Secondary Link" in filtered.columns:
     column_config["Secondary Link"] = st.column_config.LinkColumn("Secondary Link")
 
-if safe_cols:
-    st.dataframe(
-        filtered[safe_cols],
-        use_container_width=True,
-        column_config=column_config,
-        hide_index=True
-    )
-else:
-    st.dataframe(filtered, use_container_width=True, hide_index=True)
+st.dataframe(
+    filtered[safe_cols],
+    use_container_width=True,
+    column_config=column_config,
+    hide_index=True
+)
 
 # ================== MAP ==================
 st.header("Transaction Map")
