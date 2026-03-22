@@ -9,7 +9,7 @@ st.title("🇮🇳 AI Land Transactions Tracker")
 st.markdown("Automatically tracks land deals from news & X.com • Updated daily")
 
 # ================== LOAD DATA ==================
-SHEET_PUBLISH_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRPj-nFuvFfDAfhl61y5Qgssz6QQEY8RXtPaKBh73nfb0e8253X92pHh_rJ9TqpeOo_YSneo6_qyobA/pub?output=csv"  # ← CHANGE THIS
+SHEET_PUBLISH_URL = "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/pub?output=csv"  # ← CHANGE THIS
 df = pd.read_csv(SHEET_PUBLISH_URL)
 df = df.fillna("")
 
@@ -17,7 +17,7 @@ df = df.fillna("")
 if "Trans Date" in df.columns:
     df["Trans Date"] = pd.to_datetime(df["Trans Date"], errors="coerce")
 
-# ================== DEBUG: See exact columns from your sheet ==================
+# ================== DEBUG ==================
 st.subheader("🔍 Debug: Columns loaded from Google Sheet")
 st.write(df.columns.tolist())
 
@@ -37,7 +37,7 @@ if cities and "City" in filtered.columns:
 if types and "Trns Type" in filtered.columns:
     filtered = filtered[filtered["Trns Type"].isin(types)]
 
-# Stats (safe)
+# Stats
 st.metric("Total Transactions", len(filtered))
 value_col = "Transaction Value"
 if value_col in filtered.columns:
@@ -49,18 +49,18 @@ if value_col in filtered.columns:
 else:
     st.metric("Total Value (₹)", "₹0")
 
-# ================== TABLE (now 100% safe) ==================
+# ================== TABLE (Source & Link separate, NO Year) ==================
 display_cols = [
     "Description", "City", "Zoning", "Area", "Transaction Value",
     "INR Per Sq ft", "Trns Type", "Trans Date", "Property Type",
-    "Buyer", "Seller", "Source Link", "Secondary Link"
+    "Buyer", "Seller", "Source", "Link", "Secondary Link"
 ]
 
 safe_cols = [col for col in display_cols if col in filtered.columns]
 
 column_config = {}
-if "Source Link" in filtered.columns:
-    column_config["Source Link"] = st.column_config.LinkColumn("Source Link")
+if "Link" in filtered.columns:
+    column_config["Link"] = st.column_config.LinkColumn("Link")
 if "Secondary Link" in filtered.columns:
     column_config["Secondary Link"] = st.column_config.LinkColumn("Secondary Link")
 
@@ -87,7 +87,8 @@ if "Location Coordinates" in filtered.columns:
                 <b>{row.get('Description', '')}</b><br>
                 City: {row.get('City', '')}<br>
                 Value: ₹{row.get('Transaction Value', '')}<br>
-                <a href="{row.get('Source Link', '')}" target="_blank">Source</a>
+                Source: {row.get('Source', 'View')} 
+                <a href="{row.get('Link', '')}" target="_blank">[Open Link]</a>
                 """
                 folium.Marker([lat, lon], popup=folium.Popup(popup_html, max_width=300)).add_to(m)
                 added = True
